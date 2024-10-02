@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 // Klass för att representera en produkt
 class Produkt
@@ -23,12 +24,50 @@ class Produkt
     }
 }
 
+// Klass för att hantera produktlistan och logik
+class ProduktLista
+{
+    private List<Produkt> produkter = new List<Produkt>();
+
+    // Lägg till en produkt i listan
+    public void LäggTillProdukt(Produkt produkt)
+    {
+        produkter.Add(produkt);
+    }
+
+    // Sortera produkterna efter pris och skriv ut listan
+    public void VisaProdukter()
+    {
+        if (produkter.Count == 0)
+        {
+            Console.WriteLine("Ingen produkt tillagd.");
+            return;
+        }
+
+        // Sortera listan efter pris
+        var sorteradeProdukter = produkter.OrderBy(p => p.Pris).ToList();
+
+        Console.WriteLine("\nProdukter (sorterat efter pris):");
+        decimal totalPris = 0;
+
+        // Visa produkterna och beräkna totalpris
+        foreach (var produkt in sorteradeProdukter)
+        {
+            Console.WriteLine(produkt);
+            totalPris += produkt.Pris;
+        }
+
+        // Skriv ut totalpris
+        Console.WriteLine($"\nTotal pris: {totalPris:C}");
+    }
+}
+
 class Program
 {
     static void Main(string[] args)
     {
-        // Lista för att lagra produkter
-        List<Produkt> produktLista = new List<Produkt>();
+        // Skapa en instans av ProduktLista
+        ProduktLista produktLista = new ProduktLista();
 
         while (true)
         {
@@ -52,9 +91,9 @@ class Program
             // Försök att konvertera priset till decimal
             if (decimal.TryParse(prisInput, out decimal pris))
             {
-                // Lägg till produkten i listan
+                // Skapa en ny produkt och lägg till den i produktlistan
                 Produkt produkt = new Produkt(kategori, namn, pris);
-                produktLista.Add(produkt);
+                produktLista.LäggTillProdukt(produkt);
             }
             else
             {
@@ -64,11 +103,7 @@ class Program
             Console.WriteLine();
         }
 
-        // Visa alla tillagda produkter
-        Console.WriteLine("\nProdukter:");
-        foreach (var produkt in produktLista)
-        {
-            Console.WriteLine(produkt);
-        }
+        // Visa listan med produkter, sorterat och med totalpris
+        produktLista.VisaProdukter();
     }
 }
