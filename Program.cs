@@ -36,29 +36,53 @@ class ProduktLista
     }
 
     // Sortera produkterna efter pris och skriv ut listan
-    public void VisaProdukter()
+    public void VisaProdukter(List<string> highlights = null)
     {
-        if (produkter.Count == 0)
+        if (!produkter.Any())
         {
             Console.WriteLine("Ingen produkt tillagd.");
             return;
         }
 
-        // Sortera listan efter pris
+        // Sortera listan efter pris med LINQ och visa
         var sorteradeProdukter = produkter.OrderBy(p => p.Pris).ToList();
 
         Console.WriteLine("\nProdukter (sorterat efter pris):");
-        decimal totalPris = 0;
+        decimal totalPris = sorteradeProdukter.Sum(p => p.Pris);  // LINQ för att summera pris
 
-        // Visa produkterna och beräkna totalpris
+        // Visa produkterna
         foreach (var produkt in sorteradeProdukter)
         {
+            // Om det finns matchande produkter, markera dem
+            if (highlights != null && highlights.Contains(produkt.Namn, StringComparer.OrdinalIgnoreCase))
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;  // Highlight in yellow
+            }
             Console.WriteLine(produkt);
-            totalPris += produkt.Pris;
+            Console.ResetColor();
         }
 
         // Skriv ut totalpris
         Console.WriteLine($"\nTotal pris: {totalPris:C}");
+    }
+
+    // Kontrollera om användaren vill fortsätta lägga till produkter
+    public bool FortsättLäggaTill()
+    {
+        Console.Write("\nVill du lägga till fler produkter? (J/N): ");
+        string input = Console.ReadLine();
+        return input.Equals("J", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Sök efter produkter baserat på namn och returnera matchande namn
+    public List<string> SökProdukter(string sökTerm)
+    {
+        var resultat = produkter
+            .Where(p => p.Namn.Equals(sökTerm, StringComparison.OrdinalIgnoreCase))
+            .Select(p => p.Namn)
+            .ToList();
+
+        return resultat;
     }
 }
 
@@ -69,41 +93,102 @@ class Program
         // Skapa en instans av ProduktLista
         ProduktLista produktLista = new ProduktLista();
 
+        // Huvudloopen för att lägga till, söka och visa produkter
+        do
+        {
+            LäggTillProdukter(produktLista);
+            produktLista.VisaProdukter();
+
+            // Fråga om användaren vill söka i listan
+            if (VillSöka())
+            {
+                SökIProdukter(produktLista);
+            }
+
+        } while (produktLista.FortsättLäggaTill());
+
+        Console.WriteLine("Programmet avslutades.");
+    }
+
+    // Funktion för att lägga till produkter
+    static void LäggTillProdukter(ProduktLista produktLista)
+    {
         while (true)
         {
-            Console.WriteLine("Skriv in produktdetaljer eller 'Q' för att avsluta:");
-
-            // Hämta kategori
-            Console.Write("Kategori: ");
-            string kategori = Console.ReadLine();
-            if (kategori.Equals("Q", StringComparison.OrdinalIgnoreCase)) break;
-
-            // Hämta produktnamn
-            Console.Write("Namn: ");
-            string namn = Console.ReadLine();
-            if (namn.Equals("Q", StringComparison.OrdinalIgnoreCase)) break;
-
-            // Hämta pris
-            Console.Write("Pris: ");
-            string prisInput = Console.ReadLine();
-            if (prisInput.Equals("Q", StringComparison.OrdinalIgnoreCase)) break;
-
-            // Försök att konvertera priset till decimal
-            if (decimal.TryParse(prisInput, out decimal pris))
+            try
             {
-                // Skapa en ny produkt och lägg till den i produktlistan
+                Console.WriteLine("\nSkriv in produktdetaljer eller 'Q' för att avsluta:");
+
+                // Hämta kategori
+                Console.Write("Kategori: ");
+                string kategori = Console.ReadLine();
+                if (Avsluta(kategori)) break;
+
+                // Hämta produktnamn
+                Console.Write("Namn: ");
+                string namn = Console.ReadLine();
+                if (Avsluta(namn)) break;
+
+                // Hämta pris
+                Console.Write("Pris: ");
+                string prisInput = Console.ReadLine();
+                if (Avsluta(prisInput)) break;
+
+                // Försök att konvertera priset till decimal och hantera fel
+                if (!decimal.TryParse(prisInput, out decimal pris))
+                {
+                    throw new ArgumentException("Ogiltigt pris. Ange ett giltigt numeriskt värde.");
+                }
+
+                // Skapa och lägg till produkten i listan
                 Produkt produkt = new Produkt(kategori, namn, pris);
                 produktLista.LäggTillProdukt(produkt);
             }
-            else
+            catch (ArgumentException ex)
             {
-                Console.WriteLine("Ogiltigt pris. Försök igen.");
+                Console.WriteLine(ex.Message);
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("Ett oväntat fel inträffade. Försök igen.");
             }
 
             Console.WriteLine();
         }
+    }
 
-        // Visa listan med produkter, sorterat och med totalpris
-        produktLista.VisaProdukter();
+    // Funktion för att kontrollera om användaren vill avsluta
+    static bool Avsluta(string input)
+    {
+        return input.Equals("Q", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Funktion för att fråga om användaren vill söka
+    static bool VillSöka()
+    {
+        Console.Write("\nVill du söka efter en produkt i listan? (J/N): ");
+        string input = Console.ReadLine();
+        return input.Equals("J", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Funktion för att söka efter produkter
+    static void SökIProdukter(ProduktLista produktLista)
+    {
+        Console.Write("\nAnge produktnamn att söka efter: ");
+        string sökTerm = Console.ReadLine();
+
+        // Hämta matchande produkter från listan
+        var resultat = produktLista.SökProdukter(sökTerm);
+
+        if (resultat.Any())
+        {
+            // Om det finns matchande produkter, visa dem och markera dem
+            Console.WriteLine($"\n{resultat.Count} match(er) hittades:");
+            produktLista.VisaProdukter(resultat);
+        }
+        else
+        {
+            Console.WriteLine("Inga produkter matchade din sökning.");
+        }
     }
 }
